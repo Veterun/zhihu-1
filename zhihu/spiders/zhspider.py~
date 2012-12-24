@@ -1,0 +1,32 @@
+from scrapy.selector import HtmlXPathSelector
+from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
+from scrapy.contrib.spiders import CrawlSpider, Rule
+from zhihu.items import ZhihuItem
+from scrapy.http import Request,FormRequest
+
+class ZhihuSpider(CrawlSpider):
+    name = 'zhspider'
+    allowed_domains = ['zhihu.com']
+    start_urls = ['http://www.zhihu.com/']
+
+    rules = (
+        Rule(SgmlLinkExtractor(allow=r'Items/'), callback='parse_item', follow=True),
+    )
+    
+    def start_requests(self):
+        login_url='https://www.zhihu.com/login'
+        return [Request(login_url,method='get',callback=self.post_login)]
+
+    def post_login(self,response):
+        xsrf = HtmlXPathSelector(response).select('//input[@name="_xsrf"]/@value').extract()[0]
+        formdata = {'_xsrf':xsrf,'next':'/','email':'zcxywy@126.com','password':'654zc0831'}
+        return [FormRequest(url='https://www.zhihu.com/login',formdata=formdata,callback=self.parse_item)]
+        
+    def parse_item(self, response):
+        hxs = HtmlXPathSelector(response)
+        print response.body
+        i = ZhihuItem()
+        #i['domain_id'] = hxs.select('//input[@id="sid"]/@value').extract()
+        #i['name'] = hxs.select('//div[@id="name"]').extract()
+        #i['description'] = hxs.select('//div[@id="description"]').extract()
+        return i
